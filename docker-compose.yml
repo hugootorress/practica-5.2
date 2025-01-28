@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  wordpress:
+    image: bitnami/wordpress:6.7.1
+    environment:
+      - WORDPRESS_DATABASE_HOST=${WORDPRESS_DB_HOST}
+      - WORDPRESS_DATABASE_NAME=${MYSQL_DATABASE}
+      - WORDPRESS_DATABASE_USER=${MYSQL_USER}
+      - WORDPRESS_DATABASE_PASSWORD=${MYSQL_PASSWORD}
+      - WORDPRESS_USERNAME=${WORDPRESS_ADMIN_USER}
+      - WORDPRESS_PASSWORD=${WORDPRESS_ADMIN_PASSWORD}
+      - WORDPRESS_EMAIL=${WORDPRESS_ADMIN_EMAIL}
+    volumes:
+      - wordpress_data:/bitnami/wordpress
+    depends_on:
+      - mysql
+    restart: always
+    networks:
+      - frontend-network
+      - backend-network
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    networks:
+      - backend-network
+
+  phpmyadmin:
+    image: phpmyadmin:5.1
+    ports:
+      - 8080:80
+    environment:
+      PMA_HOST: mysql
+    depends_on:
+      - mysql
+    restart: always
+    networks:
+      - frontend-network
+      - backend-network
+
+  https-portal:
+    image: steveltn/https-portal:1
+    ports:
+      - 80:80
+      - 443:443
+    restart: always
+    environment:
+      DOMAINS: "${DOMAIN} -> http://wordpress:8080"
+      STAGE: ${LETSENCRYPT_STAGE} # Set to 'production' for live certificates
+    networks:
+      - frontend-network
+
+volumes:
+  wordpress_data:
+  mysql_data:
+
+networks:
+  frontend-network:
+  backend-network:
+
